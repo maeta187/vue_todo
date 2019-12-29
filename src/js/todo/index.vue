@@ -6,73 +6,179 @@
       </header>
 
       <main class="main">
-        <form class="register">
+        <!-- @submit.prevent="addTodo"フォームがsubmit(登録ボタン)されたときに"addTodo"のメソッドを実行する -->
+        <form class="register" @submit.prevent="addTodo">
           <div class="register__input">
             <p class="register__input__title">やることのタイトル</p>
+            <!-- 登録ボタンを押した時に、targetTodo.titleの値を双方向バインディングしている
+            (inputから変更された値をバインディングしてtargetTodo.titleの更新を行い、
+            更新されたtargetTodo.titleをバインディングしてinputへ返す) -->
             <input
+              v-model="targetTodo.title"
               type="text"
               name="title"
               placeholder="ここにTODOのタイトルを記入してください"
+              required
             >
           </div>
           <div class="register__input">
             <p class="register__input__title">やることの内容</p>
+            <!-- targetTodo.detailの値を双方向バインディングしている -->
             <textarea
+              v-model="targetTodo.detail"
               name="detail"
               rows="3"
               placeholder="ここにTODOの内容を記入してください。改行は半角スペースに変換されます。"
+              required
             />
-          </div>
-          <div class="register__submit">
-            <button class="register__submit__btn" type="submit" name="button">
+            </div>
+            <div class="register__submit">
+              <button class="register__submit__btn" type="submit" name="button">
               登録する
-            </button>
-          </div>
-        </form>
-
+              </button>
+            </div>
+          </form>
+          <!-- errorMessage内に値が代入されたらifの処理がされる -->
+        <div v-if="errorMessage" class="error">
+            <!-- "errorMessage"に代入された値を表示する -->
+          <p class="error__text">{{ errorMessage }}</p>
+        </div>
         <div class="todos">
-          <ul class="todos__list">
-            <li>
-              <div class="todos__inner">
-                <div class="todos__completed">
-                  <button class="todos__completed__btn" type="button">未完了</button>
+          <!-- 配列の長さを取得できたら(0以上)v-ifの処理の中に入る -->
+          <template v-if="todos.length">
+            <ul class="todos__list">
+              <!-- 完了になるとグレーアウトする -->
+              <!-- v-for="todo in todos":dataのtodosプロパティの配列の数だけループさせて、todoへ代入している -->
+              <!-- keyがないとtodosの中のデータが変更される度に全てのtodoが再描画れる為todoのidをkeyにする -->
+              <li
+                v-for="todo in todos"
+                :key="todo.id"
+                :class="todo.completed ? 'is-completed' : ''"
+              >
+                <div class="todos__inner">
+                  <div class="todos__completed">
+                    <button
+                      class="todos__completed__btn"
+                      type="button"
+                      @click="changeCompleted(todo)"
+                    >
+                      <template v-if="todo.completed">
+                        <span>完了</span>
+                      </template>
+                      <template v-else>
+                        <span>未完了</span>
+                      </template>
+                    </button>
+                  </div>
+                  <div class="todos__desc">
+                    <h2 class="todos__desc__title">{{ todo.title }}</h2>
+                    <p class="todos__desc__detail">{{ todo.detail }}</p>
+                  </div>
+                  <div class="todos__btn">
+                    <button class="todos__btn__edit" type="button">編集</button>
+                    <button class="todos__btn__delete" type="button">削除</button>
+                  </div>
                 </div>
-                <div class="todos__desc">
-                  <h2 class="todos__desc__title">ここにはTodoのタイトルが入ります</h2>
-                  <p class="todos__desc__detail">ここにはTodoの内容が入ります</p>
-                </div>
-                <div class="todos__btn">
-                  <button class="todos__btn__edit" type="button">編集</button>
-                  <button class="todos__btn__delete" type="button">削除</button>
-                </div>
-              </div>
-            </li>
-          </ul>
+              </li>
+            </ul>
+          </template>
+          <!-- todoの配列が空の時の処理を行なっている -->
+          <template v-else>
+            <p class="todos__empty">やることリストには何も登録されていません。</p>
+          </template>
         </div>
       </main>
 
       <footer class="footer">
-        <p>全項目数: 0</p>
-        <p>完了済: 0</p>
-        <p>未完了: 0</p>
+        <!-- <p>全項目数: 0</p> -->
+        <!-- <p>完了済: 0</p>
+        <p>未完了: 0</p> -->
+        <p>全項目数: {{ todos.length }}</p>
+        <p>完了済: {{ todos.filter(todo => todo.completed).length }}</p>
+        <p>未完了: {{ todos.filter(todo => !todo.completed).length }}</p>
       </footer>
     </div>
   </div>
 </template>
-
 <script>
+import axios from 'axios';
+// Vue.prototype.$axios = axios;
 export default {
   data() {
     return {
-      todos: [
-        // {
-        //   id: 1,
-        //   title: 'タイトル 01',
-        //   detail: '詳細 01',
-        //   completed: false,
-        // },
-      ],
+      todos: [],
+      targetTodo: {
+        id: null,
+        title: '',
+        detail: '',
+        completed: false,
+      },
+      errorMessage: '',
     };
+  },
+  // vueインスタンスが作成された後に実行される
+  created() {
+    // ".then(({ data }) => {});"はapi通信が成功したときに引数の関数が実行されます
+      axios.get('http://localhost:3000/api/todos/').then(({ data }) => {
+      this.todos = data.todos.reverse();
+    // ".catch((err) => {});"はapi通信が失敗したときにエラー内容が関数(.catch())の引数(err)に入っていき、実行される
+    }).catch((err) => {
+      // err.response内に何か値が入っていた場合はifの処理に入っていく
+      if (err.response) {
+        // err.response.data.messageの内容を"errorMessage"へ代入する
+        this.errorMessage = err.response.data.message;
+      } else {
+        this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
+      }
+    });
+  },
+  methods: {
+    // addTodo(event) {
+      // console.log('submit');
+      // const { target } = event;
+      // console.log('title => ', target.title.value);
+      // console.log('detail => ', target.detail.value);
+      // console.log(Object.assign({}, this.targetTodo));
+    addTodo() {
+      // 登録したtodoを”postTodo”のオブジェクトに代入している
+      const postTodo = Object.assign({}, {
+        // todoタイトル
+        title: this.targetTodo.title,
+        // todo内容
+        detail: this.targetTodo.detail,
+      });
+      console.log(Object.assign({}, this.targetTodo));
+      axios.post('http://localhost:3000/api/todos/', postTodo).then(({ data }) => {
+        this.todos.unshift(data);
+        this.targetTodo = Object.assign({}, this.targetTodo, { title: '', detail: '' });
+        this.errorMessage = '';
+      }).catch((err) => {
+        if (err.response) {
+          this.errorMessage = err.response.data.message;
+        } else {
+          this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
+        }
+      });
+    },
+    changeCompleted(todo) {
+      // console.log(Object.assign({}, todo));
+      const targetTodo = Object.assign({}, todo);
+      axios.patch(`http://localhost:3000/api/todos/${targetTodo.id}`, {
+        completed: !targetTodo.completed,
+      }).then(({ data }) => {
+        this.todos = this.todos.map((todoItem) => {
+          if (todoItem.id === targetTodo.id) return data;
+          return todoItem;
+        });
+        this.errorMessage = '';
+      }).catch((err) => {
+        if (err.response) {
+          this.errorMessage = err.response.data.message;
+        } else {
+          this.errorMessage = 'ネットに接続されてない、もしくはサーバーとの接続がされていません。ご確認ください';
+        }
+      });
+    },
   },
 };
 </script>
@@ -129,7 +235,8 @@ export default {
       font-weight: bold;
       font-size: 14px;
     }
-    input, textarea {
+    input,
+    textarea {
       padding: 10px;
       width: 100%;
       font-size: 14px;
@@ -172,7 +279,7 @@ export default {
     & > li {
       padding: 15px 10px;
       border-top: 1px solid #ddd;
-      transition: all .3s;
+      transition: all 0.3s;
       &:first-child {
         border-top: none;
       }
@@ -208,7 +315,7 @@ export default {
       border-radius: 7px;
       border: 2px solid #ff1919;
       background-color: #fff;
-      transition: all .3s;
+      transition: all 0.3s;
     }
   }
   &__desc {
@@ -219,14 +326,14 @@ export default {
       font-weight: bold;
       font-size: 16px;
       line-height: 1.2;
-      transition: all .3s;
+      transition: all 0.3s;
       input {
         padding: 5px 10px;
         width: 100%;
         color: #000;
         font-size: 16px;
         border: 1px solid #ddd;
-        transition: all .3s;
+        transition: all 0.3s;
       }
     }
     &__detail {
@@ -234,14 +341,14 @@ export default {
       color: #777;
       font-size: 14px;
       line-height: 1.2;
-      transition: all .3s;
+      transition: all 0.3s;
       textarea {
         padding: 5px 10px;
         width: 100%;
         color: #000;
         font-size: 14px;
         border: 1px solid #ddd;
-        transition: all .3s;
+        transition: all 0.3s;
       }
     }
   }
@@ -257,7 +364,7 @@ export default {
       font-size: 12px;
     }
     &__edit {
-      background-color: #07C4D7;
+      background-color: #07c4d7;
     }
     &__delete {
       margin-top: 5px;
