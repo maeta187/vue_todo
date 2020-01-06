@@ -4,15 +4,19 @@
       <header class="header">
         <h1 class="header__title">やることリスト</h1>
       </header>
-
       <main class="main">
-        <!-- @submit.prevent="addTodo"フォームがsubmit(登録ボタン)されたときに"addTodo"のメソッドを実行する -->
-        <form class="register" @submit.prevent="addTodo">
+        <!-- submitされた時に実行される処理を書いている
+        targetTodo.idがtrue(idがあれば)editTodoメソッド、false(idが無ければ)addTodoメソッドを実行する -->
+        <!-- 意図しない画面変異を起こさない為に.preventを使う -->
+        <form
+          class="register"
+          @submit.prevent="targetTodo.id ? editTodo() : addTodo()"
+        >
           <div class="register__input">
             <p class="register__input__title">やることのタイトル</p>
             <!-- 登録ボタンを押した時に、targetTodo.titleの値を双方向バインディングしている
             (inputから変更された値をバインディングしてtargetTodo.titleの更新を行い、
-            更新されたtargetTodo.titleをバインディングしてinputへ返す) -->
+            更新されたtargetTodo.titleをバインディングしてinputへ入れる) -->
             <input
               v-model="targetTodo.title"
               type="text"
@@ -34,7 +38,13 @@
             </div>
             <div class="register__submit">
               <button class="register__submit__btn" type="submit" name="button">
-              登録する
+                <!-- targetTodo.idの有無でボタンの表示名称を変更 -->
+                <template v-if="targetTodo.id">
+                  <span>変更する</span>
+                </template>
+                <template v-else>
+                  <span>登録する</span>
+                </template>
               </button>
             </div>
           </form>
@@ -50,6 +60,7 @@
               <!-- 完了になるとグレーアウトする -->
               <!-- v-for="todo in todos":dataのtodosプロパティの配列の数だけループさせて、todoへ代入している -->
               <!-- keyがないとtodosの中のデータが変更される度に全てのtodoが再描画れる為todoのidをkeyにする -->
+              <!-- completedがtrueなら"is-completed"を付与falseなら"is-completed"を外す(v-bind) -->
               <li
                 v-for="todo in todos"
                 :key="todo.id"
@@ -57,11 +68,13 @@
               >
                 <div class="todos__inner">
                   <div class="todos__completed">
+                    <!-- changeCompleted(todo)メソット:changeCompleted(todo)の"todo"が引数となっていて、対象のtodoを渡している -->
                     <button
                       class="todos__completed__btn"
                       type="button"
                       @click="changeCompleted(todo)"
                     >
+                      <!-- completedがfalseなら未完了trueなら完了 -->
                       <template v-if="todo.completed">
                         <span>完了</span>
                       </template>
@@ -71,12 +84,27 @@
                     </button>
                   </div>
                   <div class="todos__desc">
+                    <!-- 登録したtodoのタイトルと詳細を表示している -->
                     <h2 class="todos__desc__title">{{ todo.title }}</h2>
                     <p class="todos__desc__detail">{{ todo.detail }}</p>
                   </div>
                   <div class="todos__btn">
-                    <button class="todos__btn__edit" type="button">編集</button>
-                    <button class="todos__btn__delete" type="button">削除</button>
+                    <!-- クリックした時にshowEditorメソッドの実行 -->
+                    <button
+                      class="todos__btn__edit"
+                      type="button"
+                      @click="showEditor(todo)"
+                    >
+                      編集
+                    </button>
+                    <!-- クリックした時にdeleteTodoメソッドを実行 -->
+                    <button
+                      class="todos__btn__delete"
+                      type="button"
+                      @click="deleteTodo(todo.id)"
+                    >
+                      削除
+                    </button>
                   </div>
                 </div>
               </li>
@@ -88,13 +116,15 @@
           </template>
         </div>
       </main>
-
       <footer class="footer">
         <!-- <p>全項目数: 0</p> -->
         <!-- <p>完了済: 0</p>
         <p>未完了: 0</p> -->
+        <!-- todosの配列の長さを取得 -->
         <p>全項目数: {{ todos.length }}</p>
+        <!-- filterメソッドでtodo.completedの配列長さを取得 -->
         <p>完了済: {{ todos.filter(todo => todo.completed).length }}</p>
+        <!--  ●!(論理否定演算子)があるのでtodo.completedの配列の長さ以外の値を取得している -->
         <p>未完了: {{ todos.filter(todo => !todo.completed).length }}</p>
       </footer>
     </div>
@@ -119,26 +149,45 @@ export default {
   // vueインスタンスが作成された後に実行される
   created() {
     // ".then(({ data }) => {});"はapi通信が成功したときに引数の関数が実行されます
-      axios.get('http://localhost:3000/api/todos/').then(({ data }) => {
+    axios.get('http://localhost:3000/api/todos/').then(({ data }) => {
       this.todos = data.todos.reverse();
     // ".catch((err) => {});"はapi通信が失敗したときにエラー内容が関数(.catch())の引数(err)に入っていき、実行される
     }).catch((err) => {
+      this.showError(err);
       // err.response内に何か値が入っていた場合はifの処理に入っていく
-      if (err.response) {
-        // err.response.data.messageの内容を"errorMessage"へ代入する
+      // if (err.response) {
+      // err.response.data.messageの内容を"errorMessage"へ代入する
+      // this.errorMessage = err.response.data.message;
+      // } else {
+      // this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
+      // }
+    });
+  },
+  methods: {
+    initTargerTodo() {
+      return {
+        id: null,
+        title: '',
+        detail: '',
+        completed: false,
+      };
+    },
+    hideError() {
+      this.errorMessage = '';
+    },
+    showError(err) {
+      if(err.response) {
         this.errorMessage = err.response.data.message;
       } else {
         this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
       }
-    });
-  },
-  methods: {
+    },
     // addTodo(event) {
-      // console.log('submit');
-      // const { target } = event;
-      // console.log('title => ', target.title.value);
-      // console.log('detail => ', target.detail.value);
-      // console.log(Object.assign({}, this.targetTodo));
+    // console.log('submit');
+    // const { target } = event;
+    // console.log('title => ', target.title.value);
+    // console.log('detail => ', target.detail.value);
+    // console.log(Object.assign({}, this.targetTodo));
     addTodo() {
       // 登録したtodoを”postTodo”のオブジェクトに代入している
       const postTodo = Object.assign({}, {
@@ -147,36 +196,148 @@ export default {
         // todo内容
         detail: this.targetTodo.detail,
       });
-      console.log(Object.assign({}, this.targetTodo));
+      // console.log(Object.assign({}, this.targetTodo));
       axios.post('http://localhost:3000/api/todos/', postTodo).then(({ data }) => {
+        // todos(配列)の先頭にdata(todo)を追加して新しい配列を返している
         this.todos.unshift(data);
-        this.targetTodo = Object.assign({}, this.targetTodo, { title: '', detail: '' });
-        this.errorMessage = '';
+        // ●data内の、targetTodoのtitleとdetailの値を空にしている(この処理をしないと、todoを登録した後に前回入力した値が残ってします為)
+        this.targetTodo = this.initTargerTodo();
+        // this.targetTodo = Object.assign({}, this.targetTodo, { title: '', detail: '' });
+        // エラーが表示された後にTodoを追加すると、エラーを消す為の処理
+        // this.errorMessage = '';
+        this.hideError();
       }).catch((err) => {
-        if (err.response) {
-          this.errorMessage = err.response.data.message;
-        } else {
-          this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
-        }
+        this.showError(err);
+        // if (err.response) {
+        // 入力項目に不備があるとここでエラーメッセージを表示する
+        // ※入力フォームには"required"の記述があるのでそっちが優先される
+        // this.errorMessage = err.response.data.message;
+        // } else {
+        // Apiサーバーを止めた時に表示されるエラー
+        // this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
+        // }
       });
     },
+    // 未完了、完了ボタンが押されたら実行されるメソッド
+    // todoが引数となっていて、todoを受け取っている
     changeCompleted(todo) {
+      // タイトルと詳細が記入された状態で実行されたら中身を空にしている
+      this.targetTodo = this.initTargerTodo();
+      // this.targetTodo = {
+      //   id: null,
+      //   title: '',
+      //   detail: '',
+      //   completed: false,
+      // };
       // console.log(Object.assign({}, todo));
+      // todoをtargetTodoへ代入
+      // changeCompleted(todo)で実行されたオブジェクトが入ってくる
       const targetTodo = Object.assign({}, todo);
+      // ●patch既存データの上書き
+      // patchメソッドを実行し対象のtodoのidを末尾に付与して識別している
       axios.patch(`http://localhost:3000/api/todos/${targetTodo.id}`, {
-        completed: !targetTodo.completed,
+        // json内部の処理
+        completed: !targetTodo.completed, // completedの値を反転(false,true)をしている
+        // 通信が成功したときそのデータがdata引数に入ってくる
       }).then(({ data }) => {
+        // todosの配列のデータを1つ取り出して比較している
+        // ループ処理をした結果の配列を再度todos返している
         this.todos = this.todos.map((todoItem) => {
+          // todoItem.idとtargetTodo.idが一致したオブジェクトを返している
           if (todoItem.id === targetTodo.id) return data;
+          // console.log(todoItem);
+          // 一致しなかったオブジェクトを返している
           return todoItem;
         });
-        this.errorMessage = '';
+        // this.errorMessage = '';
+        this.hideError();
       }).catch((err) => {
-        if (err.response) {
-          this.errorMessage = err.response.data.message;
-        } else {
-          this.errorMessage = 'ネットに接続されてない、もしくはサーバーとの接続がされていません。ご確認ください';
-        }
+        this.showError(err);
+        // if (err.response) {
+        //   this.errorMessage = err.response.data.message;
+        // } else {
+        //   this.errorMessage = 'ネットに接続されてない、もしくはサーバーとの接続がされていません。ご確認ください';
+        // }
+      });
+    },
+    // "showEditor(todo)"で編集対象のtodoが引き渡して、"todo"で受け取っている
+    showEditor(todo) {
+      // 編集対象の配列をtargetTodoへ代入して再レンダリングをしている
+      this.targetTodo = Object.assign({}, todo);
+      // console.log(this.targetTodo);
+    },
+    editTodo() {
+      // 何も変更しなかった時の処理
+      // data(管理状態)のtodosの配列から変更の対象になっているtodoの取り出し
+      // findで繰り返し処理を行い、idで一致したオブジェクトを変数に代入している
+      const targetTodo = this.todos.find(todo => todo.id === this.targetTodo.id);
+      // 取り出したtodoのタイトルと詳細がtargetTodoのタイトルと詳細が同じであればtargetTodoを初期化して処理を処理を終了
+      if (
+        targetTodo.title === this.targetTodo.title
+        && targetTodo.detail === this.targetTodo.detail
+      ) {
+        this.targetTodo = {
+          id: null,
+          title: '',
+          detail: '',
+          completed: false,
+        };
+        return;
+      }
+      // console.log(Object.assign({}, this.targetTodo));
+      axios.patch(`http://localhost:3000/api/todos/${this.targetTodo.id}`, {
+        // タイトルの更新
+        title: this.targetTodo.title,
+        // 詳細の更新
+        detail: this.targetTodo.detail,
+      }).then(({ data }) => {
+        // todosの配列の中身を1つずつ取り出して新しい配列を返している
+        this.todos = this.todos.map((todo) => {
+          if (todo.id === this.targetTodo.id) return data;
+          return todo;
+        });
+        this.targetTodo = {
+          id: null,
+          title: '',
+          detail: '',
+          completed: false,
+        };
+        // this.errorMessage = '';
+        this.hideError();
+      }).catch((err) => {
+        this.showError(err);
+        // if (err.response) {
+        //   this.errorMessage = err.response.data.message;
+        // } else {
+        //   this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
+        // }
+      });
+    },
+    // "deleteTodo(todo.id)"でidを引き渡しているので、それを"id"で受け取っている
+    deleteTodo(id) {
+      this.targetTodo = {
+        id: null,
+        title: '',
+        detail: '',
+        completed: false,
+      };
+      // console.log(id);
+      // axiosのdeleteメソッドを実行し、todoのidを付与(todoのidに対してDELETEリクエストを送っている)
+      axios.delete(`http://localhost:3000/api/todos/${id}`).then(({ data }) => {
+        // 削除後のtodoの配列が入っているオブジェクトが返ってくるので、data(状態管理)のtodosの中の配列を返ってきたオブジェクトの中のtodosに変えて、再レンダリングさせている
+        // このままdata(管理状態)のtodosの配列に対して置き換えると順番が逆になってしまうので、reverseメソッドで直している
+        // console.log(data.todos);
+        this.todos = data.todos.reverse();
+        // this.errorMessage = '';
+        this.hideError();
+        // console.log(this.todos);
+      }).catch((err) => {
+        this.showError(err);
+        // if (err.response) {
+        //   this.errorMessage = err.response.data.message;
+        // } else {
+        //   this.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
+        // }
       });
     },
   },
