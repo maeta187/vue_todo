@@ -1,5 +1,5 @@
 import Todos from 'TodoVuexDir/containers/Todos';
-
+// name ailas ruterで使われる
 const routes = [
   {
     name: 'allTodos',

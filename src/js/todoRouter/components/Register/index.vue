@@ -2,6 +2,9 @@
   <form class="register">
     <div class="register__input">
       <p class="register__input__title">やることのタイトル</p>
+      <!-- :value="todoTitle"→porpsで受け取る -->
+      <!-- @keyup="$emit('update:todoTitle', $event.target.value)"→emitで親に返す -->
+      <!-- キーを離した瞬間にイベントが実行されてイベントと引数に入った値が親に渡される -->
       <input
         type="text"
         name="title"

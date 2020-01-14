@@ -18,4 +18,5 @@ const routes = [
   },
 ];
 
+// routesの設定を適用する為にexportする
 export default routes;

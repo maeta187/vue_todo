@@ -1,6 +1,8 @@
 <template lang="html">
   <app-wrapper :todos="todos">
+    <!-- ナビバー -->
     <app-navi />
+    <!-- 入力フォーム -->
     <app-register
       v-if="todoFilter !== 'completedTodos'"
       :todo-id="targetTodo.id"
@@ -20,11 +22,14 @@
       :props名="dataの値" => 子へ渡すprops
       @update:props名="dataの値 = 上の「propsに指定したい値」" => 子のイベント購読
     -->
+    <!-- エラーメッセージ -->
     <app-error-message
       v-if="errorMessage"
       :error-message="errorMessage"
     />
+    <!-- todo一覧 -->
     <template v-slot:todos>
+      <!-- filteredTodosの配列の長さが取得できた時、"v-if"の処理に入る -->
       <app-list
         v-if="filteredTodos.length"
         :todos="filteredTodos"
@@ -32,6 +37,7 @@
         @showEditor="showEditor"
         @deleteTodo="deleteTodo"
       />
+      <!-- todoが空の時の表示 -->
       <app-empty-message
         v-else
         :empty-message="emptyMessage"
@@ -98,16 +104,24 @@ export default {
   },
   methods: {
     setFilter() {
+      // rottes.jsのnameを取得する
       const routeName = this.$route.name;
+      // data内のtodoFilterにrouteNameを代入する
       this.todoFilter = routeName;
+      console.log(routeName);
+      // routeNameに代入されている値を比較している
+      // 入っている文字列によってfilteredTodosに入ってくる配列が変わる
       if (routeName === 'completedTodos') {
+        // 完了のtodoを代入
         this.filteredTodos = this.todos.filter(todo => todo.completed);
       } else if (routeName === 'incompleteTodos') {
+        // 未完了のtodoを代入
         this.filteredTodos = this.todos.filter(todo => !todo.completed);
       } else {
+        // 全てのtodoを代入
         this.filteredTodos = this.todos;
       }
-
+      // filteredTodosの配列の長さを取得できなかった時、setEmptyMessageを実行する
       if (!this.filteredTodos.length) this.setEmptyMessage();
     },
     setEmptyMessage() {

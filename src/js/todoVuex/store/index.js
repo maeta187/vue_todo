@@ -15,26 +15,31 @@ const store = new Vuex.Store({
       detail: '',
       completed: '',
     },
-    errorMessage: 'エラーが起きました。',
-    emptyMessage: 'やることリストは空です。',
+    // 初期値で文字が入っていたので空にした
+    errorMessage: '',
+    emptyMessage: '',
   },
+  // 読み取り専用
   getters: {
     completedTodos: (state) => state.todos.filter((todo) => todo.completed),
     incompleteTodos: (state) => state.todos.filter((todo) => !todo.completed),
     completedTodosLength: (state, getters) => getters.completedTodos.length,
     incompleteTodosLength: (state, getters) => getters.incompleteTodos.length,
   },
+  // コンポーネントでstateの中の値を変えるとdataの追跡がし難くなる。
+  // mutationsの中でしかstateの値を変えられないようにする
+  // 第2引数にはcommitから引き渡された値が入ってくる
   mutations: {
     setTodoFilter(state, routeName) {
       state.todoFilter = routeName;
     },
     setEmptyMessage(state, routeName) {
       if (routeName === 'completedTodos') {
-        let emptyMessage = '完了済みのやることリストはありません。';
+        this.state.emptyMessage = '完了済みのやることリストはありません。';
       } else if (routeName === 'incompleteTodos') {
-        let emptyMessage = '未完了のやることリストはありません。';
+        this.state.emptyMessage = '未完了のやることリストはありません。';
       } else {
-        let emptyMessage = 'やることリストには何も登録されていません。';
+        this.state.emptyMessage = 'やることリストには何も登録されていません。';
       }
     },
     initTargetTodo(state) {
@@ -46,11 +51,13 @@ const store = new Vuex.Store({
       };
     },
     hideError(state) {
-      state.errorMessage = 'エラーが起きました。';
+      state.errorMessage = '';
     },
     showError(state, payload) {
       if (payload) {
-        const errorMessage = payload.data;
+        // 修正前は変数の"errorMessage"に代入していたのでstate内の"errorMessage"へ代入するように修正
+        // const errorMessage = payload.data;
+        state.errorMessage = payload.data;
       } else {
         state.errorMessage = 'ネットに接続がされていない、もしくはサーバーとの接続がされていません。ご確認ください。';
       }
@@ -62,6 +69,7 @@ const store = new Vuex.Store({
       state.todos = payload.reverse();
     },
     addTodo(state, payload) {
+      // console.log('addtest');
       state.todos.unshift(payload);
     },
     showEditor(state, payload) {
@@ -69,11 +77,12 @@ const store = new Vuex.Store({
     },
     editTodo(state, payload) {
       state.todos = state.todos.map((todoItem) => {
-        if (todoItem.id === payload.id) return payload;
+        if (todoItem.id === payload.data.id) return payload.data;
         return todoItem;
       });
     },
   },
+  // dispatchでactions内のメソッドを実行する
   actions: {
     setTodoFilter({ commit }, routeName) {
       commit('setTodoFilter', routeName);
@@ -87,12 +96,16 @@ const store = new Vuex.Store({
     getTodos({ commit }) {
       axios.get('http://localhost:3000/api/todos/').then(({ data }) => {
         commit('getTodos', data.todos);
+        // TOdo一覧が取得できた時にmutations内のhideErrorを実行
+        commit('hideError');
       }).catch((err) => {
         commit('showError', err.response);
       });
     },
     addTodo({ commit, state }) {
+      // state内の"targetTodo.title"または"targetTodo.detail"の値が空の時にifの処理に入る
       if (!state.targetTodo.title || !state.targetTodo.detail) {
+        // mutations内のshowErrorメソッドを実行して値を渡す為にcommitでメソッド呼び出しを行い、値を引き渡す
         commit({
           type: 'showError',
           data: 'タイトルと内容はどちらも必須項目です。',
@@ -105,6 +118,8 @@ const store = new Vuex.Store({
       });
       axios.post('http://localhost:3000/api/todos/', postTodo).then(({ data }) => {
         commit('addTodo', data);
+        // Todoを登録した時にmutations内のhideErrorを実行
+        commit('hideError');
       }).catch((err) => {
         commit('showError', err.response);
       });
@@ -116,6 +131,8 @@ const store = new Vuex.Store({
         completed: !targetTodo.completed,
       }).then(({ data }) => {
         commit('editTodo', data);
+        // 完了、未完了の表示を切り替えた時にmutations内のhideErrorを実行
+        commit('hideError');
       }).catch((err) => {
         commit('showError', err.response);
       });
@@ -123,6 +140,7 @@ const store = new Vuex.Store({
     },
     showEditor({ commit }, todo) {
       commit('showEditor', todo);
+      // commit('hideError');
     },
     editTodo({ commit, state }) {
       const targetTodo = state.todos.find(todo => todo.id === state.targetTodo.id);
@@ -137,19 +155,44 @@ const store = new Vuex.Store({
         title: state.targetTodo.title,
         detail: state.targetTodo.detail,
       }).then(({ data }) => {
-        commit('editTodo', data);
+        // commit('editTodo', data);
+        commit('editTodo', {
+          data,
+        });
+        // Todoを編集した時にmutations内のhideErrorを実行
+        commit('hideError');
       }).catch((err) => {
         commit('showError', err.response);
       });
       commit('initTargetTodo');
     },
+    maeta() {
+
+    },
+    // 非同期処理が終わってからPromiseを返す
     deleteTodo({ commit }, todoId) {
-      axios.delete(`http://localhost:3000/api/todos/${todoId}`).then(({ data }) => {
-        // 処理
-      }).catch((err) => {
-        // 処理
+      // returnでPromiseオブジェクトを返している
+      return new Promise((resolve, reject) => {
+        // Promiseオブジェクトが返ってきたらthenの処理に入り、返り値がdataに入る
+        axios.delete(`http://localhost:3000/api/todos/${todoId.id}`).then(({ data }) => {
+          // オブジェクト
+          // 処理
+          // deleteが成功した時にactionのgetTodoメソッドを実行
+          // commit修正する
+          // this.dispatch('getTodos');
+          // Todoを削除した時にmutations内のhideErrorを実行
+          commit('hideError');
+          // resolveを実行して
+          resolve();
+        }).catch((err) => {
+          // 処理
+          // deleteが失敗した時にエラー内容を表示
+          // 必要があれば処理
+          // タイトルと詳細に入力されている値を初期化する
+          commit('showError', err.response);
+        });
+        commit('initTargetTodo');
       });
-      // 必要があれば処理
     },
   },
 });

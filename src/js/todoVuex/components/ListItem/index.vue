@@ -19,7 +19,6 @@
         <h2 class="todo__item__desc__title">{{ todo.title }}</h2>
         <p class="todo__item__desc__detail">{{ todo.detail }}</p>
       </div>
-
       <div class="todo__item__btn">
         <button
           class="todo__item__btn__edit"
@@ -28,9 +27,11 @@
         >
           編集
         </button>
+        <!-- actions内のdeleteTodoメソッドを実行するようにする -->
         <button
           class="todo__item__btn__delete"
           type="button"
+          @click="deleteTodo(todo)"
         >
           削除
         </button>
@@ -55,6 +56,16 @@ export default {
     },
     showEditor: function(todo) {
       this.$store.dispatch('showEditor', todo);
+    },
+    // storeのactions内のdeleteTodoを実行するメソッド
+    deleteTodo: function(todo) {
+      //  この書き方だと非同期処理なので、古い配列をgetTodoで取得してしまう可能性が発生する
+      // this.$store.dispatch('getTodo');
+      // promiseオブジェクトが返ってきてthenのメソッドが実行される
+      this.$store.dispatch('deleteTodo',todo).then((data) => {
+        // console.log(data);
+        this.$store.dispatch('getTodos');
+      });
     },
   },
 };
