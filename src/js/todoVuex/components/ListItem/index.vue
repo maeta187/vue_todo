@@ -45,24 +45,25 @@ export default {
   props: {
     todo: {
       type: Object,
-      default: function() {
+      default() {
         return {};
       },
     },
   },
   methods: {
-    changeCompleted: function(todo) {
+    changeCompleted(todo) {
       this.$store.dispatch('changeCompleted', todo);
     },
-    showEditor: function(todo) {
+    showEditor(todo) {
       this.$store.dispatch('showEditor', todo);
     },
     // storeのactions内のdeleteTodoを実行するメソッド
-    deleteTodo: function(todo) {
+    deleteTodo(todo) {
       //  この書き方だと非同期処理なので、古い配列をgetTodoで取得してしまう可能性が発生する
       // this.$store.dispatch('getTodo');
       // promiseオブジェクトが返ってきてthenのメソッドが実行される
-      this.$store.dispatch('deleteTodo',todo).then((data) => {
+      this.$store.dispatch('deleteTodo', todo).then(() => {
+      // this.$store.dispatch('deleteTodo', todo).then((data) => {
         // console.log(data);
         this.$store.dispatch('getTodos');
       });

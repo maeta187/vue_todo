@@ -1,5 +1,5 @@
 import Vue from 'vue'; // vueモジュールをインポートしている
-import VueRouter from 'vue-router'; //node_modulesのvue-routerをインポートしている
+import VueRouter from 'vue-router';
 
 // import routes from 'TodoRouterDir/routes'; //rotes.jsをインポートしている
 import routes from 'TodoVuexDir/routes';
@@ -7,7 +7,7 @@ import store from 'TodoVuexDir/store';
 // import routes from 'VuexSample/routes';
 // import store from 'VuexSample/store';
 
-import '../scss/global.scss';　//importするsassファイルの読み込み
+import '../scss/global.scss';
 
 // import myApp from './first';
 // import myApp from 'TodoDir'; //importするフォルダーを指定している(パスはwebpack.config.babelに書いてある)
@@ -16,13 +16,11 @@ import '../scss/global.scss';　//importするsassファイルの読み込み
 import myApp from 'TodoVuexDir';
 // import myApp from 'VuexSample';
 
-Vue.use(VueRouter); //vueRoter(プラグイン)を使用する宣言を行なっている
-// ●Vue.js全体に影響を与えるものがプラグイン()グローバルなプラグイン
-const router = new VueRouter({ //ルーターインスタンスを作成してオプションを渡している
+Vue.use(VueRouter);
+const router = new VueRouter({
   routes, // `routes: routes` の短縮表記
   mode: 'history',
 });
-//●VueRouterの設定をしているだけ
 
 // Vueインスタンスの作成
 new Vue({

@@ -21,8 +21,8 @@ const store = new Vuex.Store({
   },
   // 読み取り専用
   getters: {
-    completedTodos: (state) => state.todos.filter((todo) => todo.completed),
-    incompleteTodos: (state) => state.todos.filter((todo) => !todo.completed),
+    completedTodos: state => state.todos.filter(todo => todo.completed),
+    incompleteTodos: state => state.todos.filter(todo => !todo.completed),
     completedTodosLength: (state, getters) => getters.completedTodos.length,
     incompleteTodosLength: (state, getters) => getters.incompleteTodos.length,
   },
@@ -130,7 +130,9 @@ const store = new Vuex.Store({
       axios.patch(`http://localhost:3000/api/todos/${targetTodo.id}`, {
         completed: !targetTodo.completed,
       }).then(({ data }) => {
-        commit('editTodo', data);
+        commit('editTodo', {
+          data,
+        });
         // 完了、未完了の表示を切り替えた時にmutations内のhideErrorを実行
         commit('hideError');
       }).catch((err) => {
@@ -172,9 +174,9 @@ const store = new Vuex.Store({
     // 非同期処理が終わってからPromiseを返す
     deleteTodo({ commit }, todoId) {
       // returnでPromiseオブジェクトを返している
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         // Promiseオブジェクトが返ってきたらthenの処理に入り、返り値がdataに入る
-        axios.delete(`http://localhost:3000/api/todos/${todoId.id}`).then(({ data }) => {
+        axios.delete(`http://localhost:3000/api/todos/${todoId.id}`).then(() => {
           // オブジェクト
           // 処理
           // deleteが成功した時にactionのgetTodoメソッドを実行
